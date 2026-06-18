@@ -80,6 +80,24 @@ curl -s -H 'Zotero-Allowed-Request: true' \
   | jq -r '.[] | "\(.key)\t\(.data.title)"'
 ```
 
+## Tags
+
+List tags, or fetch the items carrying them.
+
+```bash
+# tags (add ?q=foo to narrow)
+curl -s -H 'Zotero-Allowed-Request: true' \
+  'http://localhost:23119/api/users/0/tags?limit=200' | jq -r '.[].tag'
+
+# items with ALL of the given tags (repeat tag= for AND; use 'A || B' for OR)
+curl -s -G -H 'Zotero-Allowed-Request: true' \
+  --data-urlencode 'tag=ab initio' \
+  --data-urlencode 'itemType=-attachment' \
+  --data-urlencode 'format=json' \
+  'http://localhost:23119/api/users/0/items' \
+  | jq -r '.[] | "\(.key)\t\(.data.title)"'
+```
+
 ## Read metadata
 
 ```bash
