@@ -68,6 +68,26 @@ curl -s -G -H 'Zotero-Allowed-Request: true' \
 
 Each row is `itemKey<TAB>date<TAB>title`. Use the `itemKey` for everything below.
 
+### Hyphenated terms
+
+Zotero treats `coupled-cluster` and `coupled cluster` as different queries with
+different result sets. When the user's keywords contain a hyphen, also search the
+spaced form and merge, deduped by item key:
+
+```bash
+Q='coupled-cluster'
+variants=("$Q"); [ "${Q//-/ }" != "$Q" ] && variants+=("${Q//-/ }")
+{
+  for v in "${variants[@]}"; do
+    curl -s -G -H 'Zotero-Allowed-Request: true' \
+      --data-urlencode "q=$v" --data-urlencode 'qmode=everything' \
+      --data-urlencode 'itemType=-attachment' --data-urlencode 'format=json' \
+      --data-urlencode 'limit=100' \
+      'http://localhost:23119/api/users/0/items'
+  done
+} | jq -rs 'add | unique_by(.key) | .[] | "\(.key)\t\(.data.date // "")\t\(.data.title)"'
+```
+
 ## Advanced search & recent items
 
 The `/items` endpoint takes filters you can combine:
