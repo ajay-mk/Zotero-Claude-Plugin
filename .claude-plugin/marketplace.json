@@ -1,0 +1,11 @@
+{
+  "name": "zotero-marketplace",
+  "owner": { "name": "Ajay" },
+  "plugins": [
+    {
+      "name": "zotero",
+      "source": "./",
+      "description": "Search, read, and cite your Zotero library from Claude Code via Zotero's local API."
+    }
+  ]
+}
