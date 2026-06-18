@@ -1,6 +1,6 @@
 ---
 name: zotero
-description: Search, read, and cite articles in the user's Zotero library. Use when the user asks to find papers/articles, look up references, read a paper's metadata or PDF, or generate a citation/bibliography from their Zotero library.
+description: Search, browse, read, and cite from the user's Zotero library. Use when the user asks to find papers/articles, look up references, browse collections or tags, read a paper's metadata, PDF, annotations, or notes, or generate a citation/bibliography from their Zotero library.
 ---
 
 # Zotero
