@@ -64,6 +64,22 @@ curl -s -G -H 'Zotero-Allowed-Request: true' \
   | jq -r '.[] | "\(.data.dateAdded[0:10])\t\(.key)\t\(.data.title)"'
 ```
 
+## Browse collections
+
+List collections with item counts, then list the items inside one.
+
+```bash
+# all collections
+curl -s -H 'Zotero-Allowed-Request: true' \
+  'http://localhost:23119/api/users/0/collections?format=json&limit=100' \
+  | jq -r '.[] | "\(.key)\t\(.meta.numItems)\t\(.data.name)"'
+
+# items in a collection
+curl -s -H 'Zotero-Allowed-Request: true' \
+  'http://localhost:23119/api/users/0/collections/COLLECTIONKEY/items?itemType=-attachment&format=json&limit=100' \
+  | jq -r '.[] | "\(.key)\t\(.data.title)"'
+```
+
 ## Read metadata
 
 ```bash
