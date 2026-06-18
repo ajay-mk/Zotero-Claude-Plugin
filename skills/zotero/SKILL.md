@@ -130,6 +130,42 @@ curl -s -H 'Zotero-Allowed-Request: true' \
   "http://localhost:23119/api/users/0/items/ATTACHMENTKEY/fulltext" | jq -r '.content'
 ```
 
+## Read annotations
+
+PDF highlights and annotation-notes are exposed as `annotation` items. Pull them
+across the whole library, or scope to one paper.
+
+```bash
+curl -s -G -H 'Zotero-Allowed-Request: true' \
+  --data-urlencode 'itemType=annotation' \
+  --data-urlencode 'format=json' \
+  --data-urlencode 'limit=100' \
+  'http://localhost:23119/api/users/0/items' \
+  | jq -r '.[] | "\(.data.annotationType)\tp\(.data.annotationPageLabel)\t\(.data.annotationText // .data.annotationComment)"'
+```
+
+Fields: `annotationType` (highlight/note/underline/…), `annotationText`,
+`annotationComment`, `annotationColor`, `annotationPageLabel`. Each annotation's
+`data.parentItem` is the **PDF attachment** key. To scope to one paper, get its
+attachment key (see **Read the PDF**) and keep annotations whose `parentItem`
+equals it.
+
+## Read notes
+
+Notes are `note` items; the body is HTML in `data.note` (strip tags for plain text).
+
+```bash
+# notes attached to a given item
+curl -s -H 'Zotero-Allowed-Request: true' \
+  'http://localhost:23119/api/users/0/items/ITEMKEY/children?format=json' \
+  | jq -r '.[] | select(.data.itemType=="note") | .data.note'
+
+# every note in the library
+curl -s -H 'Zotero-Allowed-Request: true' \
+  'http://localhost:23119/api/users/0/items?itemType=note&format=json&limit=100' \
+  | jq -r '.[].data.note'
+```
+
 ## Cite
 
 Formatted citation + bibliography entry (HTML — strip tags for plain text).
