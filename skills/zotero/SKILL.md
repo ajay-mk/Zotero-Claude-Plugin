@@ -42,6 +42,28 @@ curl -s -G -H 'Zotero-Allowed-Request: true' \
 
 Each row is `itemKey<TAB>date<TAB>title`. Use the `itemKey` for everything below.
 
+## Advanced search & recent items
+
+The `/items` endpoint takes filters you can combine:
+
+- `q` + `qmode=everything|titleCreatorYear` — full-text vs metadata-only.
+- `itemType=journalArticle` (or `-attachment` to exclude) — restrict by type.
+- `tag=Foo` (repeatable `&tag=A&tag=B` = AND; `tag=A || B` = OR) — by tag.
+- `sort=dateAdded|dateModified|title|date` + `direction=asc|desc`.
+
+Most recently added items:
+
+```bash
+curl -s -G -H 'Zotero-Allowed-Request: true' \
+  --data-urlencode 'sort=dateAdded' \
+  --data-urlencode 'direction=desc' \
+  --data-urlencode 'itemType=-attachment' \
+  --data-urlencode 'format=json' \
+  --data-urlencode 'limit=10' \
+  'http://localhost:23119/api/users/0/items' \
+  | jq -r '.[] | "\(.data.dateAdded[0:10])\t\(.key)\t\(.data.title)"'
+```
+
 ## Read metadata
 
 ```bash
