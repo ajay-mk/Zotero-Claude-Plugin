@@ -203,6 +203,10 @@ curl -s -H 'Zotero-Allowed-Request: true' \
   | jq -r '.citation, .bib'
 ```
 
+The `citation`/`bib` fields — and note/annotation bodies — are HTML. For plain
+text, strip tags with `sed 's/<[^>]*>//g'` (append to any of the recipes above).
+Good enough for display; it won't decode entities like `&amp;` → `&`.
+
 Raw BibTeX:
 
 ```bash
