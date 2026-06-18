@@ -1,6 +1,6 @@
 {
   "name": "zotero-marketplace",
-  "owner": { "name": "Ajay" },
+  "owner": { "name": "Ajay Melekamburath" },
   "plugins": [
     {
       "name": "zotero",
