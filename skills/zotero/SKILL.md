@@ -1,0 +1,109 @@
+---
+name: zotero
+description: Search, read, and cite articles in the user's Zotero library. Use when the user asks to find papers/articles, look up references, read a paper's metadata or PDF, or generate a citation/bibliography from their Zotero library.
+---
+
+# Zotero
+
+Work with the user's local Zotero library over its built-in HTTP API. No server,
+no dependencies — just `curl` + `jq`, and the Read tool for PDFs.
+
+- **Base:** `http://localhost:23119/api/users/0` (local library is user `0`)
+- **Header:** every request must send `Zotero-Allowed-Request: true`
+- Zotero must be **running** and the **local API must be enabled** (see Setup).
+
+## Step 0 — Preflight (run first)
+
+```bash
+curl -s -o /dev/null -w '%{http_code}\n' \
+  -H 'Zotero-Allowed-Request: true' \
+  "http://localhost:23119/api/users/0/items?limit=1"
+```
+
+- `200` → ready.
+- `403` → local API is off. Walk the user through **Setup** below.
+- `000` / connection refused → Zotero isn't running. Ask the user to open it.
+
+## Search by keyword
+
+`-G --data-urlencode` handles spaces/encoding. `qmode=everything` includes
+indexed PDF full-text; drop to `qmode=titleCreatorYear` for metadata-only.
+
+```bash
+curl -s -G -H 'Zotero-Allowed-Request: true' \
+  --data-urlencode 'q=YOUR KEYWORDS' \
+  --data-urlencode 'qmode=everything' \
+  --data-urlencode 'itemType=-attachment' \
+  --data-urlencode 'format=json' \
+  --data-urlencode 'limit=25' \
+  'http://localhost:23119/api/users/0/items' \
+  | jq -r '.[] | "\(.key)\t\(.data.date // "")\t\(.data.title)"'
+```
+
+Each row is `itemKey<TAB>date<TAB>title`. Use the `itemKey` for everything below.
+
+## Read metadata
+
+```bash
+curl -s -H 'Zotero-Allowed-Request: true' \
+  "http://localhost:23119/api/users/0/items/ITEMKEY?format=json" | jq '.data'
+```
+
+Use `format=csljson` if you want CSL-shaped fields instead.
+
+## Read the PDF
+
+Find the PDF attachment, then open the file from disk with the **Read** tool
+(it renders PDFs natively — no download needed).
+
+```bash
+curl -s -H 'Zotero-Allowed-Request: true' \
+  "http://localhost:23119/api/users/0/items/ITEMKEY/children?format=json" \
+  | jq -r '.[] | select(.data.contentType=="application/pdf")
+           | "\(.key)\t\(.data.linkMode)\t\(.data.filename // .data.path)"'
+```
+
+- `linkMode` = `imported_file` / `imported_url` → file is at
+  `~/Zotero/storage/<attachmentKey>/<filename>`. Read that path.
+- `linkMode` = `linked_file` → the `path` field is the absolute location. Read it.
+
+For just the extracted text (no figures/layout), use the attachment key:
+
+```bash
+curl -s -H 'Zotero-Allowed-Request: true' \
+  "http://localhost:23119/api/users/0/items/ATTACHMENTKEY/fulltext" | jq -r '.content'
+```
+
+## Cite
+
+Formatted citation + bibliography entry (HTML — strip tags for plain text).
+`style` accepts any installed/known CSL style name; default to `apa`.
+
+```bash
+curl -s -H 'Zotero-Allowed-Request: true' \
+  "http://localhost:23119/api/users/0/items/ITEMKEY?include=citation,bib&style=apa&format=json" \
+  | jq -r '.citation, .bib'
+```
+
+Raw BibTeX:
+
+```bash
+curl -s -H 'Zotero-Allowed-Request: true' \
+  "http://localhost:23119/api/users/0/items/ITEMKEY?format=bibtex"
+```
+
+## Setup — enable the local API (one time)
+
+If preflight returns `403`:
+
+1. Zotero → **Settings → Advanced → Config Editor**.
+2. Set `extensions.zotero.httpServer.localAPI.enabled` to `true`.
+3. Ensure **"Allow other applications on this computer to communicate with
+   Zotero"** is checked (Settings → Advanced).
+4. **Restart Zotero**, then re-run preflight.
+
+## Smoke test (verify it works)
+
+Search a keyword you know is in the library → pick one `itemKey` → fetch its
+metadata → fetch its citation → locate its PDF. If all four return data, the
+skill is working end to end.
