@@ -52,8 +52,12 @@ curl -s -D - -o /dev/null -H 'Zotero-Allowed-Request: true' \
 
 ## Search by keyword
 
-`-G --data-urlencode` handles spaces/encoding. `qmode=everything` includes
-indexed PDF full-text; drop to `qmode=titleCreatorYear` for metadata-only.
+`-G --data-urlencode` handles spaces/encoding. `qmode=everything` searches
+title, creator, year, abstract, tags, and notes — but **not** PDF body text
+(the local API's `q` does not index it, despite Zotero's docs). Multiple words
+are AND-ed, so longer queries return fewer hits — start broad.
+`qmode=titleCreatorYear` narrows to title/creator/year only. For terms that
+appear only inside a PDF's body, use the **full-text fallback** below.
 
 ```bash
 curl -s -G -H 'Zotero-Allowed-Request: true' \
@@ -87,6 +91,34 @@ variants=("$Q"); [ "${Q//-/ }" != "$Q" ] && variants+=("${Q//-/ }")
   done
 } | jq -rs 'add | unique_by(.key) | .[] | "\(.key)\t\(.data.date // "")\t\(.data.title)"'
 ```
+
+### Full-text fallback (PDF body)
+
+When you know a paper is in the library but keyword search misses it, the term
+likely lives only in the PDF body, which `q=` does not index. Query Zotero's
+prebuilt word index directly (read-only; safe while Zotero runs). This returns
+**only item keys** — no PDF text enters context, so it's cheap. Set `WORDS` to
+lowercase terms; it matches items whose PDF contains **all** of them
+(order-independent).
+
+```bash
+WORDS="similarity constrained"   # lowercase terms, space-separated
+N=$(echo "$WORDS" | wc -w | tr -d ' ')
+IN=$(echo "$WORDS" | tr ' ' '\n' | sed "s/.*/'&'/" | paste -sd, -)  # shell-portable (zsh/bash)
+sqlite3 -readonly "file:$HOME/Zotero/zotero.sqlite?immutable=1" "
+  SELECT parent.key
+  FROM fulltextItemWords fiw
+  JOIN fulltextWords fw   ON fw.wordID = fiw.wordID
+  JOIN itemAttachments ia ON ia.itemID = fiw.itemID
+  JOIN items parent       ON parent.itemID = ia.parentItemID
+  WHERE fw.word IN ($IN)
+  GROUP BY parent.itemID
+  HAVING COUNT(DISTINCT fw.word) = $N;"
+```
+
+Feed the returned keys into **Read metadata** for titles. Caveats: word index
+only (no stemming/phrases); plain lowercase terms (no quotes/punctuation);
+standalone PDFs with no parent item are skipped.
 
 ## Advanced search & recent items
 
