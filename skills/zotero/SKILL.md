@@ -269,9 +269,12 @@ curl -s -H 'Zotero-Allowed-Request: true' \
 ## Add a paper (by DOI or arXiv)
 
 Adds an item **locally, with no API key**, via the connector's import endpoint:
-resolve the identifier to BibTeX through doi.org content negotiation, then import
-it. The item lands in whatever library/collection is **currently selected in the
-Zotero UI**; Zotero must be running. A `201` returns the created item as JSON.
+resolve the identifier to **RIS** through doi.org content negotiation, then import
+it. RIS carries no citation key, so **Better BibTeX generates the key in your
+configured format** — importing BibTeX instead would pin the publisher's key
+(e.g. `Jiang_2026`). The item lands in whatever library/collection is **currently
+selected in the Zotero UI**; Zotero must be running. A `201` returns the created
+item as JSON.
 
 ```bash
 ID='https://doi.org/10.1021/acs.jctc.5c01910'   # DOI, doi.org URL, or 'arXiv:1707.06769'
@@ -280,14 +283,18 @@ case "$ID" in
   http*doi.org/*) DOI="${ID#*doi.org/}" ;;
   10.*)           DOI="$ID" ;;
 esac
-curl -LsfH 'Accept: application/x-bibtex' "https://doi.org/$DOI" \
-  | curl -s -X POST -H 'Content-Type: application/x-bibtex' --data-binary @- \
-      'http://localhost:23119/connector/import'
+curl -LsfH 'Accept: application/x-research-info-systems' "https://doi.org/$DOI" \
+  | curl -s -X POST \
+      -H 'Content-Type: application/x-research-info-systems' \
+      -H 'X-Zotero-Connector-API-Version: 3' --data-binary @- \
+      "http://localhost:23119/connector/import?session=add-$RANDOM$RANDOM"
 ```
 
-Scope: DOI and arXiv only, and it imports **metadata (no PDF)**. Arbitrary URLs,
-ISBN, and PMID aren't covered (use Zotero's "Add by Identifier" UI). Editing or
-deleting items still needs the Web API — the local API can't (it returns `501`).
+Each import needs a **unique `session=`** — the connector rejects a reused one
+with `409 SESSION_EXISTS`. Scope: DOI and arXiv only, **metadata (no PDF)**.
+Arbitrary URLs, ISBN, and PMID aren't covered (use Zotero's "Add by Identifier"
+UI). Editing or deleting items still needs the Web API — the local API returns
+`501`.
 
 ## Setup — enable the local API (one time)
 
