@@ -37,9 +37,13 @@ curl -s -o /dev/null -w '%{http_code}\n' \
 ## Install
 
 ```
-/plugin marketplace add <this-repo-url>
+/plugin marketplace add ajay-mk/Zotero-Claude-Plugin
 /plugin install zotero@zotero-marketplace
 ```
 
 Then just ask Claude things like *"find my papers on diffusion models"*,
 *"read the PDF for that one"*, or *"cite it in APA"*.
+
+## License
+
+MIT — see [LICENSE](LICENSE).
