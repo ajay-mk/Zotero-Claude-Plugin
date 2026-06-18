@@ -38,6 +38,18 @@ tool over shell for opening PDFs. For the storage path, use only the filename's
 basename and reject any `..`, so a crafted filename can't escape
 `~/Zotero/storage/<key>/`.
 
+## Result limits
+
+List endpoints (search, collections, tags, annotations, notes) return at most
+`limit` items — default 25, **max 100 per request** — and silently truncate
+beyond that. Raise `limit` up to 100; for more, page with `start=0`, `start=100`,
+… and read the `Total-Results` header to know when to stop:
+
+```bash
+curl -s -D - -o /dev/null -H 'Zotero-Allowed-Request: true' \
+  'http://localhost:23119/api/users/0/items?limit=1' | grep -i total-results
+```
+
 ## Search by keyword
 
 `-G --data-urlencode` handles spaces/encoding. `qmode=everything` includes
