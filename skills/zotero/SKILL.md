@@ -1,6 +1,6 @@
 ---
 name: zotero
-description: Search, browse, read, and cite from the user's Zotero library. Use when the user asks to find papers/articles, look up references, browse collections or tags, read a paper's metadata, PDF, annotations, or notes, or generate a citation/bibliography from their Zotero library.
+description: Search, browse, read, and cite from the user's Zotero library. Use when the user asks to find papers/articles, look up references, browse collections or tags, read a paper's metadata, PDF, annotations, or notes, add a paper by DOI or arXiv ID, or generate a citation/bibliography from their Zotero library.
 ---
 
 # Zotero
@@ -265,6 +265,29 @@ Raw BibTeX:
 curl -s -H 'Zotero-Allowed-Request: true' \
   "http://localhost:23119/api/users/0/items/ITEMKEY?format=bibtex"
 ```
+
+## Add a paper (by DOI or arXiv)
+
+Adds an item **locally, with no API key**, via the connector's import endpoint:
+resolve the identifier to BibTeX through doi.org content negotiation, then import
+it. The item lands in whatever library/collection is **currently selected in the
+Zotero UI**; Zotero must be running. A `201` returns the created item as JSON.
+
+```bash
+ID='https://doi.org/10.1021/acs.jctc.5c01910'   # DOI, doi.org URL, or 'arXiv:1707.06769'
+case "$ID" in
+  arXiv:*|arxiv:*) DOI="10.48550/arXiv.${ID#*:}" ;;
+  http*doi.org/*) DOI="${ID#*doi.org/}" ;;
+  10.*)           DOI="$ID" ;;
+esac
+curl -LsfH 'Accept: application/x-bibtex' "https://doi.org/$DOI" \
+  | curl -s -X POST -H 'Content-Type: application/x-bibtex' --data-binary @- \
+      'http://localhost:23119/connector/import'
+```
+
+Scope: DOI and arXiv only, and it imports **metadata (no PDF)**. Arbitrary URLs,
+ISBN, and PMID aren't covered (use Zotero's "Add by Identifier" UI). Editing or
+deleting items still needs the Web API — the local API can't (it returns `501`).
 
 ## Setup — enable the local API (one time)
 
