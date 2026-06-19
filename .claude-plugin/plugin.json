@@ -1,6 +1,6 @@
 {
   "name": "zotero",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Search, read, and cite your Zotero library from Claude Code via Zotero's local API.",
   "author": { "name": "Ajay Melekamburath" }
 }
