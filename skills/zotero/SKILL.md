@@ -1,6 +1,6 @@
 ---
 name: zotero
-description: Search, browse, read, and cite from the user's Zotero library. Use when the user asks to find papers/articles, look up references, browse collections or tags, read a paper's metadata, PDF, annotations, or notes, add a paper by DOI or arXiv ID, add references cited by a paper, or generate a citation/bibliography from their Zotero library.
+description: Search, browse, read, and cite from the user's Zotero library. Use when the user asks to find papers/articles, look up references, browse collections or tags, read a paper's metadata, PDF, annotations, or notes, add a paper by DOI or arXiv ID, add references cited by a paper (by number, author, or topic), or generate a citation/bibliography from their Zotero library.
 ---
 
 # Zotero
@@ -296,12 +296,13 @@ Arbitrary URLs, ISBN, and PMID aren't covered (use Zotero's "Add by Identifier"
 UI). Editing or deleting items still needs the Web API — the local API returns
 `501`.
 
-## Add references from a paper (by citation number)
+## Add references from a paper (by number, author, or topic)
 
 When the user wants specific works **cited by** a paper already in their library
-— *"add references [12], [15] and [30] from this paper"* — use the paper's own
-numbered bibliography as the index and Crossref as the DOI resolver, then add
-each via the **Add a paper** recipe above. Confirm before adding.
+— *"add references [12], [15] and [30]"*, *"add the references by Kvaal"*, or
+*"add the references on real-time coupled cluster"* — use the paper's own
+bibliography as the index and Crossref as the DOI resolver, then add each via the
+**Add a paper** recipe above. Confirm before adding.
 
 **1. Get the source paper's PDF text.** Find its `itemKey` (search / read
 recipes), then its PDF attachment key (see **Read the PDF**), then pull the
@@ -313,9 +314,16 @@ curl -s -H 'Zotero-Allowed-Request: true' \
 ```
 
 If `.content` is empty (text not indexed), fall back to opening the PDF with the
-**Read** tool. Either way, find the bibliography and the entries for the
-requested numbers. A number not present → report it, **never** guess a
-neighboring entry.
+**Read** tool. Then find the bibliography and select the entries the user asked
+for:
+
+- **By number** — exact entries `[12]`, `[15]`, … A requested number not present
+  → report it, **never** guess a neighboring entry.
+- **By author** — entries whose author list includes the named person.
+- **By topic** — entries whose title/subject is relevant; lean **inclusive**
+  (the confirm table below lets the user drop anything over-matched).
+
+If a filter matches no entries, say so rather than adding anything.
 
 **2. Resolve each entry to a DOI.**
 
