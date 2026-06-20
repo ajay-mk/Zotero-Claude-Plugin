@@ -1,6 +1,6 @@
 ---
 name: zotero
-description: Search, browse, read, and cite from the user's Zotero library. Use when the user asks to find papers/articles, look up references, browse collections or tags, read a paper's metadata, PDF, annotations, or notes, add a paper by DOI or arXiv ID, or generate a citation/bibliography from their Zotero library.
+description: Search, browse, read, and cite from the user's Zotero library. Use when the user asks to find papers/articles, look up references, browse collections or tags, read a paper's metadata, PDF, annotations, or notes, add a paper by DOI or arXiv ID, add references cited by a paper, or generate a citation/bibliography from their Zotero library.
 ---
 
 # Zotero
@@ -296,6 +296,57 @@ Arbitrary URLs, ISBN, and PMID aren't covered (use Zotero's "Add by Identifier"
 UI). Editing or deleting items still needs the Web API — the local API returns
 `501`.
 
+## Add references from a paper (by citation number)
+
+When the user wants specific works **cited by** a paper already in their library
+— *"add references [12], [15] and [30] from this paper"* — use the paper's own
+numbered bibliography as the index and Crossref as the DOI resolver, then add
+each via the **Add a paper** recipe above. Confirm before adding.
+
+**1. Get the source paper's PDF text.** Find its `itemKey` (search / read
+recipes), then its PDF attachment key (see **Read the PDF**), then pull the
+extracted text — cheap, no figures enter context:
+
+```bash
+curl -s -H 'Zotero-Allowed-Request: true' \
+  "http://localhost:23119/api/users/0/items/ATTACHMENTKEY/fulltext" | jq -r '.content'
+```
+
+If `.content` is empty (text not indexed), fall back to opening the PDF with the
+**Read** tool. Either way, find the bibliography and the entries for the
+requested numbers. A number not present → report it, **never** guess a
+neighboring entry.
+
+**2. Resolve each entry to a DOI.**
+
+- If a DOI or arXiv id is printed in the entry text, use it directly (common in
+  recent papers).
+- Otherwise look it up in Crossref by the entry text. `query.bibliographic`
+  takes a free-form citation string; `rows=1` returns the single best match.
+  Include a `mailto` for Crossref's polite pool.
+
+```bash
+ENTRY='Kohn W, Sham LJ. Self-consistent equations including exchange and correlation effects. Phys Rev 1965'
+curl -s -G 'https://api.crossref.org/works' \
+  --data-urlencode "query.bibliographic=$ENTRY" \
+  --data-urlencode 'rows=1' \
+  --data-urlencode 'mailto=ajaymk22@vt.edu' \
+  | jq -r '.message.items[0] | "\(.DOI)\t\(.title[0])\t\(.author[0].family // "")\t\(.score)"'
+```
+
+Accept the DOI **only if** the returned title / first author plausibly match the
+entry (Crossref always returns *something*). If they don't match, treat the
+entry as **unresolved** rather than adding the wrong paper.
+
+**3. Confirm.** Show a table — `#  │  title  │  resolved DOI (or "no DOI
+found")` — and add nothing yet. Crossref titles may contain HTML like
+`<i>…</i>`; strip tags for display (`sed 's/<[^>]*>//g'`), as elsewhere. Unresolved entries: list them with their text so
+the user can add them manually.
+
+**4. Add on confirm.** For each resolved DOI, run the **Add a paper (by DOI or
+arXiv)** recipe with a **unique `session=` per item**. Report the `201`s and
+anything skipped.
+
 ## Setup — enable the local API (one time)
 
 If preflight returns `403`:
@@ -311,3 +362,7 @@ If preflight returns `403`:
 Search a keyword you know is in the library → pick one `itemKey` → fetch its
 metadata → fetch its citation → locate its PDF. If all four return data, the
 skill is working end to end.
+
+For **Add references from a paper**: pick a paper whose PDF text is indexed,
+read one numbered reference, and confirm Crossref returns a plausible DOI for it
+before any add.
